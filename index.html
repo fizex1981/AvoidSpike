@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Avoid Spikes - Deep Blue Sky</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            background-size: 400% 400%;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            overflow: hidden;
+            touch-action: manipulation;
+            animation: gradientBG 15s ease infinite;
+        }
+        
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        canvas {
+            background-color: #0077be;
+            box-shadow: 0 0 60px rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
+            width: 100%;
+            max-height: 85vh;
+            aspect-ratio: 360 / 560;
+            display: none;
+            image-rendering: crisp-edges;
+            touch-action: manipulation;
+        }
+
+        #pc-hint {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            opacity: 0.6;
+            font-size: 14px;
+            pointer-events: none;
+            text-align: center;
+            width: 100%;
+        }
+        
+        #loadingScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+                    align-items: center;
+            z-index: 1000;
+            color: white;
+        }
+        
+        #loadingScreen h1 {
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        #loader {
+            width: 60px;
+            height: 60px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+        }
+        
+        .loading-text {
+            margin-top: 20px;
+            font-size: 1.2em;
+            opacity: 0.8;
+        }
+        
+        #soundToggle {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 10;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        #soundToggle:hover {
+            background: rgba(0,0,0,0.7);
+        }
+        
+        #pauseButton {
+            position: absolute;
+            top: 15px;
+            right: 80px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 10;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        #pauseButton:hover {
+            background: rgba(0,0,0,0.7);
+        }
+        
+        #scoreDisplay {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            z-index: 10;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .pause-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            border-radius: 12px;
+        }
+        
+        .pause-text {
+            color: white;
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .pause-subtext {
+            color: #fdbb2d;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            text-align: center;
+            padding: 0 20px;
+        }
+        
+        .pause-stats {
+            color: white;
+            font-size: 1.2em;
+            margin: 10px 0;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 8px;
+            min-width: 200px;
+            text-align: center;
+        }
+        
+        #resumeButton, #restartButton {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        @media (max-width: 400px) {
+            canvas {
+                border-radius: 0;
+                max-height: 100vh;
+            }
+            #pc-hint {
+                font-size: 12px;
+                bottom: 5px;
+            }
+            #soundToggle, #pauseButton {
+                top: 10px;
+                padding: 10px 14px; /* Lebih besar untuk mobile */
+                font-size: 14px;
+                min-width: 60px;
+                min-height: 44px; /* Minimum touch target size */
+            }
+            #pauseButton {
+                right: 80px; /* Beri jarak lebih */
+            }
+            #scoreDisplay {
+                top: 10px;
+                left: 10px;
+                padding: 6px 12px;
+                font-size: 14px;
+            }
+            .pause-text {
+                font-size: 2em;
+            }
+            .pause-subtext {
+                font-size: 1em;
+            }
+        }
+        
+        @media (max-height: 600px) {
+            canvas {
+                max-height: 90vh;
+            }
+            #pc-hint {
+                display: none;
+            }
+        }
+    </style>
+
+
+
+
+
+
+
+
+
+<script type="text/javascript">
+window.SDK_OPTIONS = {
+  gameId: "fky27xjep5iu9wae9qv7uef1bbj9iclg",
+  onEvent: function (a) {
+    switch (a.name) {
+
+      case "SDK_READY":
+        console.log("✅ GameMonetize SDK READY");
+        break;
+
+      case "SDK_GAME_PAUSE":
+        window.gamePaused = true;
+        console.log("⏸️ Ad playing - game paused");
+        break;
+
+      case "SDK_GAME_START":
+        window.gamePaused = false;
+        console.log("▶️ Ad finished - game resumed");
+        break;
+    }
+  }
+};
+
+(function (a, b, c) {
+  var d = a.getElementsByTagName(b)[0];
+  a.getElementById(c) || (
+    a = a.createElement(b),
+    a.id = c,
+    a.src = "https://api.gamemonetize.com/sdk.js",
+    d.parentNode.insertBefore(a, d)
+  )
+})(document, "script", "gamemonetize-sdk");
+</script>
+
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div id="loadingScreen">
+    <h1>AVOID SPIKES</h1>
+    <div id="loader"></div>
+    <p class="loading-text">Loading game...</p>
+</div>
+
+<!-- Game Container -->
+<div id="gameContainer">
+    <button id="soundToggle">🔊 Sound On</button>
+    <button id="pauseButton">⏸️ Pause</button>
+    <div id="scoreDisplay">Score: 0 | Best: 0</div>
+    <canvas id="gameCanvas"></canvas>
+    <div id="pc-hint">Press SPACE or TAP to Jump</div>
+    
+    <!-- Pause Overlay -->
+    <div id="pauseOverlay" class="pause-overlay">
+        <div class="pause-text">GAME PAUSED</div>
+        <div class="pause-subtext">Take a break, then continue your adventure!</div>
+        <div class="pause-stats" id="pauseScore">Current Score: 0</div>
+        <div class="pause-stats" id="pauseBest">Best Score: 0</div>
+        <div class="pause-subtext" style="margin-top: 40px;">
+            Press ESC or click Resume to continue<br>
+            Or click Restart to start over
+        </div>
+        <div style="margin-top: 30px; display: flex; gap: 20px;">
+            <button id="resumeButton" style="
+                background: #4CAF50;
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 8px;
+                font-size: 1.1em;
+                cursor: pointer;
+                font-weight: bold;
+                transition: all 0.2s ease;
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: transparent;
+            ">▶️ Resume</button>
+            <button id="restartButton" style="
+                background: #f44336;
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 8px;
+                font-size: 1.1em;
+                cursor: pointer;
+                font-weight: bold;
+                transition: all 0.2s ease;
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: transparent;
+            ">🔄 Restart</button>
+        </div>
+    </div>
+</div>
+
+<script>
+
+window.gamePaused = false;
+
+    // ==================== GLOBAL VARIABLES ====================
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 360;
+    canvas.height = 560;
+    
+    let score = 0;
+    let highScore = localStorage.getItem('spikeHighScore') || 0;
+    let gameActive = false;
+    let gameStarted = false;
+    let soundEnabled = true;
+    let gamePaused = false;
+    
+    const gravity = 0.24;
+    const jumpImpulse = -5;
+    const birdSpeed = 3.5;
+    
+    const bird = { x: 180, y: 280, radius: 14, velocity: 0, direction: 1, color: '#FF5252' };
+    
+    // ==================== SISTEM ITEM SATU-SATU ====================
+    let currentItem = null;
+    const ITEM_TYPES = {
+        FRUIT: { 
+            type: 'FRUIT', 
+            icon: '🍎', 
+            color: '#FF5252', 
+            points: 5,
+            spawnChance: 0.7,
+            duration: 8000
+        },
+        SHIELD: { 
+            type: 'SHIELD', 
+            icon: '🛡️', 
+            color: '#4FC3F7', 
+            duration: 7000,
+            effect: 'shield' 
+        },
+        SLOWMO: { 
+            type: 'SLOWMO', 
+            icon: '⏳', 
+            color: '#FFD54F', 
+            duration: 5000,
+            effect: 'slowmo' 
+        },
+        DOUBLE: { 
+            type: 'DOUBLE', 
+            icon: '2️⃣', 
+            color: '#BA68C8', 
+            duration: 6000,
+            effect: 'double' 
+        }
+    };
+    
+    let leftWallSpikes = [];
+    let rightWallSpikes = [];
+    const clouds = [];
+    
+    let activePowerUp = null;
+    let powerUpTimer = 0;
+    let shieldActive = false;
+    let itemTimer = 0;
+    let itemCooldown = 0; // Cooldown untuk mencegah spawn berulang
+
+    // ==================== LOADING SCREEN ====================
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('gameCanvas').style.display = 'block';
+            document.getElementById('scoreDisplay').textContent = `Score: 0 | Best: ${highScore}`;
+        }, 2000);
+    });
+    
+    // ==================== PAUSE SYSTEM ====================
+    function togglePause() {
+        if (!gameStarted || !gameActive) return;
+        
+        gamePaused = !gamePaused;
+        
+        if (gamePaused) {
+            // Update pause overlay stats
+            document.getElementById('pauseScore').textContent = `Current Score: ${score}`;
+            document.getElementById('pauseBest').textContent = `Best Score: ${highScore}`;
+            
+            // Show pause overlay
+            document.getElementById('pauseOverlay').style.display = 'flex';
+            document.getElementById('pauseButton').textContent = '▶️ Resume';
+            
+            // Pause audio context if exists
+            if (audioContext && audioContext.state === 'running') {
+                audioContext.suspend();
+            }
+        } else {
+            // Hide pause overlay
+            document.getElementById('pauseOverlay').style.display = 'none';
+            document.getElementById('pauseButton').textContent = '⏸️ Pause';
+            
+            // Resume audio context if exists
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            
+            // Continue game loop
+            if (!gamePaused) {
+                requestAnimationFrame(draw);
+            }
+        }
+    }
+    
+    function resumeGame() {
+        if (gamePaused) {
+            gamePaused = false;
+            document.getElementById('pauseOverlay').style.display = 'none';
+            document.getElementById('pauseButton').textContent = '⏸️ Pause';
+            
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            
+            if (!gamePaused) {
+                requestAnimationFrame(draw);
+            }
+        }
+    }
+    
+  function restartFromPause() {
+    gamePaused = false;
+    window.gamePaused = false;
+
+    document.getElementById('pauseOverlay').style.display = 'none';
+    document.getElementById('pauseButton').textContent = '⏸️ Pause';
+
+    if (audioContext && audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
+
+    resetGame();
+
+    // 🔥 PENTING: restart animation loop
+    requestAnimationFrame(draw);
+}
+    
+    // Event listeners for pause system
+    document.getElementById('pauseButton').addEventListener('click', togglePause);
+    document.getElementById('resumeButton').addEventListener('click', resumeGame);
+    document.getElementById('restartButton').addEventListener('click', restartFromPause);
+    
+    // Keyboard controls for pause (ESC key)
+    window.addEventListener('keydown', function(e) {
+        if (e.code === 'Escape' && gameStarted && gameActive) {
+            togglePause();
+            e.preventDefault();
+        }
+    });
+    
+    // ==================== SOUND SYSTEM ====================
+    let audioContext;
+    let sounds = {};
+    
+    function initAudio() {
+        if (audioContext) return;
+        try {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            sounds.jump = createBeep(800, 0.1, 0.2);
+            sounds.score = createBeep(600, 0.1, 0.2);
+            sounds.fruit = createBeep(1000, 0.2, 0.3);
+            sounds.powerup = createBeep(1200, 0.3, 0.3);
+            sounds.shieldHit = createBeep(300, 0.1, 0.2);
+            sounds.gameOver = createBeep(200, 0.5, 0.4);
+        } catch (e) {
+            console.log("Audio not supported");
+        }
+    }
+    
+    function createBeep(f, d, v) {
+        return () => {
+            if (!audioContext || !soundEnabled || gamePaused) return;
+            const o = audioContext.createOscillator();
+            const g = audioContext.createGain();
+            o.connect(g);
+            g.connect(audioContext.destination);
+            o.frequency.value = f;
+            g.gain.setValueAtTime(v, audioContext.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + d);
+            o.start();
+            o.stop(audioContext.currentTime + d);
+        };
+    }
+    
+    function playSound(s) {
+        if (sounds[s] && soundEnabled && !gamePaused) {
+            try {
+                sounds[s]();
+            } catch (e) {
+                console.log("Sound error:", e);
+            }
+        }
+    }
+    
+    document.getElementById('soundToggle').addEventListener('click', function() {
+        soundEnabled = !soundEnabled;
+        this.textContent = soundEnabled ? '🔊' : '🔇';
+        
+        if (soundEnabled && audioContext && audioContext.state === 'suspended') {
+            audioContext.resume();
+        }
+        
+        if (soundEnabled && !audioContext) {
+            initAudio();
+        }
+        
+        localStorage.setItem('spikeSoundEnabled', soundEnabled);
+    });
+    
+    window.addEventListener('load', function() {
+        const savedSound = localStorage.getItem('spikeSoundEnabled');
+        if (savedSound !== null) {
+            soundEnabled = (savedSound === 'true');
+            document.getElementById('soundToggle').textContent = 
+                soundEnabled ? '🔊 ' : '🔇';
+        }
+    });
+    
+    // ==================== CLOUD SYSTEM ====================
+    function initClouds() {
+        for (let i = 0; i < 5; i++) {
+            clouds.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * (canvas.height - 150),
+                speed: 0.2 + Math.random() * 0.4,
+                size: 40 + Math.random() * 40,
+                opacity: 0.6 + Math.random() * 0.3
+            });
+        }
+    }
+    
+    function drawClouds() {
+        ctx.fillStyle = 'white';
+        clouds.forEach(cloud => {
+            ctx.globalAlpha = cloud.opacity;
+            ctx.beginPath();
+            ctx.arc(cloud.x, cloud.y, cloud.size * 0.3, 0, Math.PI * 2);
+            ctx.arc(cloud.x + cloud.size * 0.2, cloud.y - cloud.size * 0.15, cloud.size * 0.25, 0, Math.PI * 2);
+            ctx.arc(cloud.x + cloud.size * 0.4, cloud.y, cloud.size * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+            cloud.x -= cloud.speed;
+            if (cloud.x + cloud.size < -50) cloud.x = canvas.width + 50;
+        });
+        ctx.globalAlpha = 1.0;
+    }
+    
+    // ==================== SISTEM ITEM SATU-SATU ====================
+    function spawnSingleItem() {
+        // Cek apakah sudah ada item atau masih cooldown
+        if (currentItem || itemCooldown > 0) return;
+        
+        // Cek timer sudah habis
+        if (itemTimer > 0) return;
+        
+        // Spawn item dengan delay kecil untuk mencegah race condition
+        if (Math.random() < ITEM_TYPES.FRUIT.spawnChance) {
+            currentItem = {
+                ...ITEM_TYPES.FRUIT,
+                x: 80 + Math.random() * (canvas.width - 160),
+                y: 100 + Math.random() * (canvas.height - 200),
+                floatOffset: Math.random() * Math.PI * 2,
+                collected: false
+            };
+            itemTimer = ITEM_TYPES.FRUIT.duration;
+        } else {
+            const powerUpTypes = ['SHIELD', 'SLOWMO', 'DOUBLE'];
+            const randomType = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
+            
+            currentItem = {
+                ...ITEM_TYPES[randomType],
+                x: 80 + Math.random() * (canvas.width - 160),
+                y: 100 + Math.random() * (canvas.height - 200),
+                floatOffset: Math.random() * Math.PI * 2,
+                collected: false
+            };
+            itemTimer = ITEM_TYPES[randomType].duration;
+        }
+        
+        console.log("Item spawned:", currentItem.type, "Timer:", itemTimer);
+    }
+    
+    function updateItem() {
+        if (gamePaused) return;
+        
+        // Update item cooldown
+        if (itemCooldown > 0) {
+            itemCooldown -= 16;
+        }
+        
+        // Jika tidak ada item, keluar
+        if (!currentItem) return;
+        
+        // Update animasi item
+        currentItem.floatOffset += 0.05;
+        itemTimer -= 16;
+        
+        // Cek jika timer habis
+        if (itemTimer <= 0) {
+            console.log("Item expired:", currentItem.type);
+            currentItem = null;
+            itemTimer = 0;
+            itemCooldown = 1000; // Cooldown 1 detik sebelum spawn baru
+            return;
+        }
+        
+        // Cek tabrakan dengan burung
+        if (!currentItem.collected) {
+            const floatY = Math.sin(currentItem.floatOffset) * 8;
+            const dist = Math.hypot(
+                bird.x - currentItem.x, 
+                bird.y - (currentItem.y + floatY)
+            );
+            
+            if (dist < 25) {
+                collectItem(currentItem);
+            }
+        }
+    }
+    
+    function collectItem(item) {
+        item.collected = true;
+        
+        if (item.type === 'FRUIT') {
+            score += activePowerUp === 'DOUBLE' ? 10 : 5;
+            playSound('fruit');
+            document.getElementById('scoreDisplay').textContent = `Score: ${score} | Best: ${highScore}`;
+            currentItem = null;
+            itemTimer = 0;
+            itemCooldown = 2000; // Cooldown 2 detik setelah mengambil fruit
+            console.log("Fruit collected, cooldown activated");
+        } else {
+            activePowerUp = item.type;
+            powerUpTimer = item.duration;
+            shieldActive = (item.type === 'SHIELD');
+            playSound('powerup');
+            currentItem = null;
+            itemTimer = 0;
+            itemCooldown = 3000; // Cooldown 3 detik setelah mengambil power-up
+            console.log("Power-up collected:", item.type, "cooldown activated");
+        }
+    }
+    
+    function drawItem() {
+        if (!currentItem) return;
+        
+        ctx.save();
+        ctx.font = '28px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        const floatY = Math.sin(currentItem.floatOffset) * 8;
+        
+        // Efek berkedip saat akan hilang
+        if (itemTimer < 2000) {
+            ctx.globalAlpha = 0.5 + Math.sin(Date.now() * 0.01) * 0.5;
+        }
+        
+        ctx.shadowColor = currentItem.color;
+        ctx.shadowBlur = 15;
+        ctx.fillText(currentItem.icon, currentItem.x, currentItem.y + floatY);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1.0;
+        
+        ctx.restore();
+    }
+    
+    // ==================== POWER-UP SYSTEM ====================
+    function updatePowerUp() {
+        if (gamePaused) return;
+        
+        if (activePowerUp && powerUpTimer > 0) {
+            powerUpTimer -= 16;
+            if (powerUpTimer <= 0) {
+                activePowerUp = null;
+                shieldActive = false;
+                console.log("Power-up expired");
+            }
+        }
+    }
+    
+    function drawPowerUpStatus() {
+        if (activePowerUp) {
+            ctx.save();
+            ctx.font = '16px Arial';
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'left';
+            ctx.fillText(`${activePowerUp}: ${Math.ceil(powerUpTimer/1000)}s`, 10, 25);
+            ctx.restore();
+        }
+    }
+    
+    // ==================== GAME LOGIC ====================
+    function createWallSpikes(side) {
+        let newSpikes = [];
+        const gap = 55;
+        const chance = 0.2 + (Math.min(score, 25) * 0.02);
+        for (let y = 80; y < canvas.height - 80; y += gap) {
+            if (Math.random() < chance) newSpikes.push(y);
+        }
+        if (side === 'left') leftWallSpikes = newSpikes;
+        else rightWallSpikes = newSpikes;
+        
+        // Coba spawn item dengan kemungkinan tertentu
+        if (!currentItem && itemCooldown <= 0 && Math.random() > 0.5) {
+            setTimeout(() => {
+                if (gameActive && !currentItem && itemCooldown <= 0 && !gamePaused) {
+                    spawnSingleItem();
+                }
+            }, 100);
+        }
+    }
+    
+    function checkSpikeCollision(side, spikesArray) {
+        if (shieldActive) {
+            if (spikesArray.some(sy => bird.y > sy - 18 && bird.y < sy + 18)) {
+                playSound('shieldHit');
+                return false;
+            }
+            return false;
+        } else {
+            return spikesArray.some(sy => bird.y > sy - 18 && bird.y < sy + 18);
+        }
+    }
+    
+    function triggerGameOver() {
+        if (!gameActive || gamePaused) return;
+        
+        gameActive = false;
+        playSound('gameOver');
+        
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('spikeHighScore', highScore);
+        }
+        
+        document.getElementById('scoreDisplay').textContent = `Score: ${score} | Best: ${highScore}`;
+        
+        // Reset item state
+        currentItem = null;
+        itemTimer = 0;
+        itemCooldown = 0;
+    }
+    
+    function resetGame() {
+        score = 0;
+        bird.x = 180;
+        bird.y = 280;
+        bird.velocity = -5;
+        bird.direction = 1;
+        leftWallSpikes = [];
+        rightWallSpikes = [];
+        currentItem = null;
+        activePowerUp = null;
+        shieldActive = false;
+        powerUpTimer = 0;
+        itemTimer = 0;
+        itemCooldown = 0;
+        gameActive = true;
+        gameStarted = true;
+        gamePaused = false;
+        
+        // Hide pause overlay if visible
+        document.getElementById('pauseOverlay').style.display = 'none';
+        document.getElementById('pauseButton').textContent = '⏸️ Pause';
+        
+        setTimeout(() => {
+            if (gameActive && !currentItem && itemCooldown <= 0 && !gamePaused) {
+                spawnSingleItem();
+            }
+        }, 2000);
+        
+        document.getElementById('scoreDisplay').textContent = `Score: ${score} | Best: ${highScore}`;
+    }
+    
+    // ==================== INPUT HANDLING ====================
+    const handleAction = (e) => {
+        if (gamePaused) return;
+        
+        if (e.code && e.code !== 'Space') return;
+        if (e.cancelable) e.preventDefault();
+        
+        if (!audioContext && soundEnabled) {
+            initAudio();
+        }
+        
+        if (!gameActive) {
+            resetGame();
+        } else {
+            bird.velocity = jumpImpulse;
+            playSound('jump');
+        }
+    };
+    
+    // ==================== IMPROVED TOUCH HANDLING - SOLUSI NO.2 ====================
+    // SOLUSI: Pisahkan event listener untuk canvas (game area) dan tombol kontrol
+    
+    // HANYA canvas yang bisa trigger lompat
+    canvas.addEventListener('touchstart', function(e) {
+        handleAction(e);
+        e.preventDefault();
+    }, { passive: false });
+    
+    // Tombol-tombol TIDAK trigger lompat sama sekali
+    // Sound toggle button
+    document.getElementById('soundToggle').addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.click(); // Trigger click event biasa
+    }, { passive: false });
+    
+    // Pause button
+    document.getElementById('pauseButton').addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.click(); // Trigger click event biasa
+    }, { passive: false });
+    
+    // Resume button (dalam pause overlay)
+    document.getElementById('resumeButton').addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.click(); // Trigger click event biasa
+    }, { passive: false });
+    
+    // Restart button (dalam pause overlay)
+    document.getElementById('restartButton').addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.click(); // Trigger click event biasa
+    }, { passive: false });
+    
+    // Tetap pertahankan event listeners untuk mouse dan keyboard
+    window.addEventListener('mousedown', handleAction);
+    window.addEventListener('keydown', handleAction);
+    
+    // ==================== DRAWING FUNCTIONS ====================
+    function drawSpike(x, y, dir) {
+        ctx.fillStyle = shieldActive ? '#78909C' : '#37474F';
+        ctx.beginPath();
+        if (dir === 'down') {
+            ctx.moveTo(x - 11, 0);
+            ctx.lineTo(x + 11, 0);
+            ctx.lineTo(x, 22);
+        } else if (dir === 'up') {
+            ctx.moveTo(x - 11, 560);
+            ctx.lineTo(x + 11, 560);
+            ctx.lineTo(x, 538);
+        } else if (dir === 'right') {
+            ctx.moveTo(0, y - 11);
+            ctx.lineTo(0, y + 11);
+            ctx.lineTo(22, y);
+        } else if (dir === 'left') {
+            ctx.moveTo(360, y - 11);
+            ctx.lineTo(360, y + 11);
+            ctx.lineTo(338, y);
+        }
+        ctx.fill();
+    }
+    
+    function drawBird() {
+        ctx.save();
+        ctx.translate(bird.x, bird.y);
+        
+        if (shieldActive) {
+            ctx.strokeStyle = '#4FC3F7';
+            ctx.lineWidth = 3;
+            ctx.globalAlpha = 0.7 + Math.sin(Date.now() * 0.01) * 0.3;
+            ctx.beginPath();
+            ctx.arc(0, 0, bird.radius + 8, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.globalAlpha = 1.0;
+        }
+        
+        ctx.fillStyle = bird.color;
+        ctx.beginPath();
+        ctx.arc(0, 0, bird.radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(6 * bird.direction, -4, 4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = 'black';
+        ctx.beginPath();
+        ctx.arc(7 * bird.direction, -4, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#FF8A00';
+        ctx.beginPath();
+        ctx.moveTo(10 * bird.direction, 0);
+        ctx.lineTo(18 * bird.direction, 0);
+        ctx.lineTo(14 * bird.direction, 4);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+    
+    // ==================== UPDATE LOGIC ====================
+    function update() {
+if (window.gamePaused) return;
+        
+        if (!gameActive || gamePaused) return;
+        
+        const currentSpeed = activePowerUp === 'SLOWMO' ? birdSpeed * 0.6 : birdSpeed;
+        const currentGravity = activePowerUp === 'SLOWMO' ? gravity * 0.6 : gravity;
+        
+        bird.velocity += currentGravity;
+        bird.y += bird.velocity;
+        bird.x += currentSpeed * bird.direction;
+        
+        updateItem();
+        updatePowerUp();
+        
+        // Spawn item dengan kemungkinan kecil setiap frame
+        if (!currentItem && itemCooldown <= 0 && Math.random() > 0.998) {
+            spawnSingleItem();
+        }
+        
+        if (bird.x + bird.radius > canvas.width) {
+            const hitSpike = checkSpikeCollision('right', rightWallSpikes);
+            
+            if (hitSpike && !shieldActive) {
+                triggerGameOver();
+            } else if (!hitSpike || shieldActive) {
+                bird.direction = -1;
+                score += activePowerUp === 'DOUBLE' ? 2 : 1;
+                playSound('score');
+                rightWallSpikes = [];
+                createWallSpikes('left');
+                document.getElementById('scoreDisplay').textContent = `Score: ${score} | Best: ${highScore}`;
+            }
+        } else if (bird.x - bird.radius < 0) {
+            const hitSpike = checkSpikeCollision('left', leftWallSpikes);
+            
+            if (hitSpike && !shieldActive) {
+                triggerGameOver();
+            } else if (!hitSpike || shieldActive) {
+                bird.direction = 1;
+                score += activePowerUp === 'DOUBLE' ? 2 : 1;
+                playSound('score');
+                leftWallSpikes = [];
+                createWallSpikes('right');
+                document.getElementById('scoreDisplay').textContent = `Score: ${score} | Best: ${highScore}`;
+            }
+        }
+        
+        if (bird.y < 25 || bird.y > 535) {
+            triggerGameOver();
+        }
+    }
+    
+    // ==================== RENDER LOOP ====================
+    function draw() {
+if (window.gamePaused) return;
+
+        if (gamePaused) return;
+        
+        const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        sky.addColorStop(0, '#1e90ff');
+        sky.addColorStop(1, '#87ceeb');
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        drawClouds();
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 100px Arial';
+        ctx.fillText(score, 180, 310);
+        
+        for (let i = 15; i < 360; i += 30) {
+            drawSpike(i, 0, 'down');
+            drawSpike(i, 560, 'up');
+        }
+        
+        leftWallSpikes.forEach(sy => drawSpike(0, sy, 'right'));
+        rightWallSpikes.forEach(sy => drawSpike(360, sy, 'left'));
+        
+        drawItem();
+        drawBird();
+        drawPowerUpStatus();
+        
+        if (!gameActive) {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+            ctx.fillRect(0, 0, 360, 560);
+            
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 32px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(gameStarted ? 'GAME OVER' : 'AVOID SPIKES', 180, 220);
+            
+            ctx.font = '24px Arial';
+            ctx.fillText('Score: ' + score, 180, 270);
+            ctx.fillText('Best: ' + highScore, 180, 310);
+            
+            if (shieldActive) {
+                ctx.font = '18px Arial';
+                ctx.fillStyle = '#4FC3F7';
+                ctx.fillText('Shield was active!', 180, 350);
+            }
+            
+            ctx.fillStyle = '#fdbb2d';
+            ctx.font = 'bold 24px Arial';
+            ctx.fillText(gameStarted ? 'TAP TO RESTART' : 'TAP TO START', 180, 400);
+            
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.font = '14px Arial';
+            ctx.fillText('One item at a time - Fruit or Power-up', 180, 450);
+            ctx.fillText('Press ESC to pause game', 180, 480);
+        }
+        
+        update();
+        if (!gamePaused) {
+            requestAnimationFrame(draw);
+        }
+    }
+    
+    // ==================== INITIALIZATION ====================
+    function initGame() {
+        initClouds();
+        initAudio();
+        draw();
+    }
+    
+    initGame();
+</script>
+</body>
+</html>
