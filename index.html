@@ -219,8 +219,6 @@
 
 
 
-
-
 <script type="text/javascript">
 window.SDK_OPTIONS = {
   gameId: "fky27xjep5iu9wae9qv7uef1bbj9iclg",
@@ -513,15 +511,6 @@ window.gamePaused = false;
         }
         
         localStorage.setItem('spikeSoundEnabled', soundEnabled);
-    });
-    
-    window.addEventListener('load', function() {
-        const savedSound = localStorage.getItem('spikeSoundEnabled');
-        if (savedSound !== null) {
-            soundEnabled = (savedSound === 'true');
-            document.getElementById('soundToggle').textContent = 
-                soundEnabled ? '🔊 ' : '🔇';
-        }
     });
     
     // ==================== CLOUD SYSTEM ====================
