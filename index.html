@@ -50,7 +50,7 @@
             width: 100%;
             max-height: 85vh;
             aspect-ratio: 360 / 560;
-            display: none;
+            display: block;
             image-rendering: crisp-edges;
             touch-action: manipulation;
         }
@@ -66,42 +66,6 @@
             pointer-events: none;
             text-align: center;
             width: 100%;
-        }
-        
-        #loadingScreen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-                    align-items: center;
-            z-index: 1000;
-            color: white;
-        }
-        
-        #loadingScreen h1 {
-            font-size: 2.5em;
-            margin-bottom: 30px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        }
-        
-        #loader {
-            width: 60px;
-            height: 60px;
-            border: 5px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s linear infinite;
-        }
-        
-        .loading-text {
-            margin-top: 20px;
-            font-size: 1.2em;
-            opacity: 0.8;
         }
         
         #soundToggle {
@@ -294,13 +258,6 @@ window.SDK_OPTIONS = {
 </head>
 <body>
 
-<!-- Loading Screen -->
-<div id="loadingScreen">
-    <h1>AVOID SPIKES</h1>
-    <div id="loader"></div>
-    <p class="loading-text">Loading game...</p>
-</div>
-
 <!-- Game Container -->
 <div id="gameContainer">
     <button id="soundToggle">🔊 </button>
@@ -417,15 +374,6 @@ window.gamePaused = false;
     let itemTimer = 0;
     let itemCooldown = 0; // Cooldown untuk mencegah spawn berulang
 
-    // ==================== LOADING SCREEN ====================
-    window.addEventListener('load', function() {
-        setTimeout(function() {
-            document.getElementById('loadingScreen').style.display = 'none';
-            document.getElementById('gameCanvas').style.display = 'block';
-            document.getElementById('scoreDisplay').textContent = `Score: 0 | Best: ${highScore}`;
-        }, 2000);
-    });
-    
     // ==================== PAUSE SYSTEM ====================
     function togglePause() {
         if (!gameStarted || !gameActive) return;
