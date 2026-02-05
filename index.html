@@ -31,6 +31,11 @@
             100% { background-position: 0% 50%; }
         }
         
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
         #gameContainer {
             position: relative;
             width: 100%;
@@ -45,7 +50,7 @@
             width: 100%;
             max-height: 85vh;
             aspect-ratio: 360 / 560;
-            display: block;
+            display: none;
             image-rendering: crisp-edges;
             touch-action: manipulation;
         }
@@ -61,6 +66,42 @@
             pointer-events: none;
             text-align: center;
             width: 100%;
+        }
+        
+        #loadingScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+                    align-items: center;
+            z-index: 1000;
+            color: white;
+        }
+        
+        #loadingScreen h1 {
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        #loader {
+            width: 60px;
+            height: 60px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+        }
+        
+        .loading-text {
+            margin-top: 20px;
+            font-size: 1.2em;
+            opacity: 0.8;
         }
         
         #soundToggle {
@@ -176,13 +217,13 @@
             }
             #soundToggle, #pauseButton {
                 top: 10px;
-                padding: 10px 14px;
+                padding: 10px 14px; /* Lebih besar untuk mobile */
                 font-size: 14px;
                 min-width: 60px;
-                min-height: 44px;
+                min-height: 44px; /* Minimum touch target size */
             }
             #pauseButton {
-                right: 80px;
+                right: 80px; /* Beri jarak lebih */
             }
             #scoreDisplay {
                 top: 10px;
@@ -210,9 +251,16 @@
 </head>
 <body>
 
+<!-- Loading Screen -->
+<div id="loadingScreen">
+    <h1>AVOID SPIKES</h1>
+    <div id="loader"></div>
+    <p class="loading-text">Loading game...</p>
+</div>
+
 <!-- Game Container -->
 <div id="gameContainer">
-    <button id="soundToggle">🔊 </button>
+    <button id="soundToggle">🔊 Sound On</button>
     <button id="pauseButton">⏸️ Pause</button>
     <div id="scoreDisplay">Score: 0 | Best: 0</div>
     <canvas id="gameCanvas"></canvas>
@@ -321,7 +369,16 @@
     let powerUpTimer = 0;
     let shieldActive = false;
     let itemTimer = 0;
-    let itemCooldown = 0;
+    let itemCooldown = 0; // Cooldown untuk mencegah spawn berulang
+
+    // ==================== LOADING SCREEN ====================
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('gameCanvas').style.display = 'block';
+            document.getElementById('scoreDisplay').textContent = `Score: 0 | Best: ${highScore}`;
+        }, 2000);
+    });
     
     // ==================== PAUSE SYSTEM ====================
     function togglePause() {
@@ -384,13 +441,7 @@
             audioContext.resume();
         }
         
-        // Reset game sepenuhnya
         resetGame();
-        
-        // Mulai game loop
-        if (!gamePaused) {
-            requestAnimationFrame(draw);
-        }
     }
     
     // Event listeners for pause system
@@ -470,7 +521,7 @@
         if (savedSound !== null) {
             soundEnabled = (savedSound === 'true');
             document.getElementById('soundToggle').textContent = 
-                soundEnabled ? '🔊' : '🔇';
+                soundEnabled ? '🔊 ' : '🔇';
         }
     });
     
@@ -557,7 +608,7 @@
             console.log("Item expired:", currentItem.type);
             currentItem = null;
             itemTimer = 0;
-            itemCooldown = 1000;
+            itemCooldown = 1000; // Cooldown 1 detik sebelum spawn baru
             return;
         }
         
@@ -584,8 +635,7 @@
             document.getElementById('scoreDisplay').textContent = `Score: ${score} | Best: ${highScore}`;
             currentItem = null;
             itemTimer = 0;
-            itemCooldown = 2000;
-            
+            itemCooldown = 2000; // Cooldown 2 detik setelah mengambil fruit
             console.log("Fruit collected, cooldown activated");
         } else {
             activePowerUp = item.type;
@@ -594,7 +644,7 @@
             playSound('powerup');
             currentItem = null;
             itemTimer = 0;
-            itemCooldown = 3000;
+            itemCooldown = 3000; // Cooldown 3 detik setelah mengambil power-up
             console.log("Power-up collected:", item.type, "cooldown activated");
         }
     }
@@ -750,35 +800,42 @@
         }
     };
     
-    // ==================== IMPROVED TOUCH HANDLING ====================
+    // ==================== IMPROVED TOUCH HANDLING - SOLUSI NO.2 ====================
+    // SOLUSI: Pisahkan event listener untuk canvas (game area) dan tombol kontrol
+    
+    // HANYA canvas yang bisa trigger lompat
     canvas.addEventListener('touchstart', function(e) {
         handleAction(e);
         e.preventDefault();
     }, { passive: false });
     
     // Tombol-tombol TIDAK trigger lompat sama sekali
+    // Sound toggle button
     document.getElementById('soundToggle').addEventListener('touchstart', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        this.click();
+        this.click(); // Trigger click event biasa
     }, { passive: false });
     
+    // Pause button
     document.getElementById('pauseButton').addEventListener('touchstart', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        this.click();
+        this.click(); // Trigger click event biasa
     }, { passive: false });
     
+    // Resume button (dalam pause overlay)
     document.getElementById('resumeButton').addEventListener('touchstart', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        this.click();
+        this.click(); // Trigger click event biasa
     }, { passive: false });
     
+    // Restart button (dalam pause overlay)
     document.getElementById('restartButton').addEventListener('touchstart', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        this.click();
+        this.click(); // Trigger click event biasa
     }, { passive: false });
     
     // Tetap pertahankan event listeners untuk mouse dan keyboard
@@ -948,117 +1005,19 @@
                 ctx.fillText('Shield was active!', 180, 350);
             }
             
-            // TOMBOL RESTART
-            const buttonX = 180;
-            const buttonY = 400;
-            const buttonWidth = 160;
-            const buttonHeight = 50;
-            const buttonRadius = 10;
+            ctx.fillStyle = '#fdbb2d';
+            ctx.font = 'bold 24px Arial';
+            ctx.fillText(gameStarted ? 'TAP TO RESTART' : 'TAP TO START', 180, 400);
             
-            // Tombol background
-            ctx.fillStyle = '#f44336';
-            ctx.beginPath();
-            ctx.roundRect(buttonX - buttonWidth/2, buttonY - buttonHeight/2, buttonWidth, buttonHeight, buttonRadius);
-            ctx.fill();
-            
-            // Tombol hover effect
-            const mousePos = getMousePos(canvas);
-            const mouseInButton = mousePos.x >= buttonX - buttonWidth/2 && 
-                                  mousePos.x <= buttonX + buttonWidth/2 &&
-                                  mousePos.y >= buttonY - buttonHeight/2 && 
-                                  mousePos.y <= buttonY + buttonHeight/2;
-            
-            if (mouseInButton) {
-                ctx.fillStyle = '#d32f2f';
-                ctx.beginPath();
-                ctx.roundRect(buttonX - buttonWidth/2, buttonY - buttonHeight/2, buttonWidth, buttonHeight, buttonRadius);
-                ctx.fill();
-            }
-            
-            // Tombol text
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 20px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('🔄 RESTART', buttonX, buttonY);
-            
-            // Instructions
             ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
             ctx.font = '14px Arial';
             ctx.fillText('One item at a time - Fruit or Power-up', 180, 450);
             ctx.fillText('Press ESC to pause game', 180, 480);
-            
-            // Tambahkan event listener untuk tombol restart
-            canvas.addEventListener('click', handleRestartButtonClick);
-            canvas.addEventListener('touchstart', handleRestartButtonTouch, { passive: false });
-        } else {
-            // Hapus event listener jika game aktif
-            canvas.removeEventListener('click', handleRestartButtonClick);
-            canvas.removeEventListener('touchstart', handleRestartButtonTouch);
         }
         
         update();
         if (!gamePaused) {
             requestAnimationFrame(draw);
-        }
-    }
-    
-    // ==================== RESTART BUTTON HANDLING ====================
-    function getMousePos(canvas) {
-        const rect = canvas.getBoundingClientRect();
-        return {
-            x: mouseX - rect.left,
-            y: mouseY - rect.top
-        };
-    }
-    
-    let mouseX = 0;
-    let mouseY = 0;
-    
-    canvas.addEventListener('mousemove', function(e) {
-        const rect = canvas.getBoundingClientRect();
-        mouseX = e.clientX - rect.left;
-        mouseY = e.clientY - rect.top;
-    });
-    
-    function handleRestartButtonClick(e) {
-        if (!gameActive) {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            
-            const buttonX = 180;
-            const buttonY = 400;
-            const buttonWidth = 160;
-            const buttonHeight = 50;
-            
-            if (x >= buttonX - buttonWidth/2 && x <= buttonX + buttonWidth/2 &&
-                y >= buttonY - buttonHeight/2 && y <= buttonY + buttonHeight/2) {
-                resetGame();
-                e.preventDefault();
-                e.stopPropagation();
-            }
-        }
-    }
-    
-    function handleRestartButtonTouch(e) {
-        if (!gameActive && e.touches.length > 0) {
-            const rect = canvas.getBoundingClientRect();
-            const touch = e.touches[0];
-            const x = touch.clientX - rect.left;
-            const y = touch.clientY - rect.top;
-            
-            const buttonX = 180;
-            const buttonY = 400;
-            const buttonWidth = 160;
-            const buttonHeight = 50;
-            
-            if (x >= buttonX - buttonWidth/2 && x <= buttonX + buttonWidth/2 &&
-                y >= buttonY - buttonHeight/2 && y <= buttonY + buttonHeight/2) {
-                resetGame();
-                e.preventDefault();
-                e.stopPropagation();
-            }
         }
     }
     
@@ -1069,10 +1028,7 @@
         draw();
     }
     
-    // Initialize game when page loads
-    window.addEventListener('load', function() {
-        initGame();
-    });
+    initGame();
 </script>
 </body>
 </html>
