@@ -785,7 +785,6 @@
     const handleAction = (e) => {
         if (gamePaused) return;
         
-        if (e.code && e.code !== 'Space') return;
         if (e.cancelable) e.preventDefault();
         
         if (!audioContext && soundEnabled) {
